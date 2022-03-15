@@ -1,9 +1,13 @@
 import discord
 import requests
 import json
+import os
 from datetime import date
-from secrets import token
 from numpy import random
+from dotenv import load_dotenv
+
+# Create environment variables
+load_dotenv()
 
 client = discord.Client()
 
@@ -86,4 +90,4 @@ async def on_message(message):
         rand = random.randint(0, len(ogMemes))
         await message.channel.send(ogMemes[rand])
 
-client.run(token)
+client.run(os.getenv('TOKEN'))
