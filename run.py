@@ -2,6 +2,7 @@ import discord
 import requests
 import json
 import os
+import asyncio
 from discord.ext import commands
 from datetime import date
 from numpy import random
@@ -68,6 +69,11 @@ class MyClient(discord.Client):
         else:
             return f'Hoy es: {today}'
 
+    
+    # def get_roles(self):
+    #     roles = discord.utils.get(member.server.roles)
+    #     return ", ".join([str(r.id) for r in roles.roles])
+
 
     async def on_ready(self):
         print('Logged in as')
@@ -78,12 +84,22 @@ class MyClient(discord.Client):
     async def on_member_join(self, member):
         guild = member.guild
         if guild.system_channel is not None:
-            to_send = 'Welcome {0.mention} to {1.name}!'.format(member, guild)
+            role = discord.utils.get(member.guild.roles, name="Member")
+            member.add_role(role)
+            to_send = f'Welcome {member.mention} to {guild.name}'
             await guild.system_channel.send(to_send)
 
     async def on_message(self, message):
         if message.author == client.user:
             return
+
+        # if message.content.startswith('$utils'):
+        #     mydir = f'These are the dirs\n{dir(discord.utils.get)}'
+        #     await message.channel.send(mydir)
+
+        # if message.content.startswith('$directories'):
+        #     mydir = f'These are the dirs\n{dir(self)}'
+        #     await message.channel.send(mydir)
 
         if message.content.startswith('$hello'):
             await message.channel.send('Hello!')
@@ -97,6 +113,30 @@ class MyClient(discord.Client):
         if message.content.startswith('$getOG'):
             rand = random.randint(0, len(self.ogMemes))
             await message.channel.send(self.ogMemes[rand])
+
+        if message.content.startswith('$userInfo'):
+            await message.channel.send('What kind of info would you like to retrieve?\n1) Avatar\n2) ID')
+
+            def is_correct(m):
+                if m.content.isdigit():
+                    if m.content == 1 or 2:
+                        values = True
+                    else:
+                        values = False
+                else:
+                    return False
+
+                return m.author == message.author and values
+
+            try:
+                option = await self.wait_for('message', check=is_correct, timeout=5.0)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+            
+            if option.content == '1':
+                await message.channel.send(message.author.avatar_url)
+            else:
+                await message.channel.send(message.author.id)
 
 intents = discord.Intents.default()
 intents.members = True
