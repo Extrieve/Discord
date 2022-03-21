@@ -84,7 +84,7 @@ class MyClient(discord.Client):
     async def on_member_join(self, member):
         guild = member.guild
         if guild.system_channel is not None:
-            role = discord.utils.get(member.guild.roles, name="Member")
+            role = discord.utils.get(member.guild.roles, name="Normies")
             member.add_role(role)
             to_send = f'Welcome {member.mention} to {guild.name}'
             await guild.system_channel.send(to_send)
@@ -115,11 +115,11 @@ class MyClient(discord.Client):
             await message.channel.send(self.ogMemes[rand])
 
         if message.content.startswith('$userInfo'):
-            await message.channel.send('What kind of info would you like to retrieve?\n1) Avatar\n2) ID')
+            await message.channel.send('What kind of info would you like to retrieve?\n1) Avatar\n2) ID\n3) Discord Account Creation')
 
             def is_correct(m):
                 if m.content.isdigit():
-                    if m.content == 1 or 2:
+                    if m.content == 1 or 2 or 3:
                         values = True
                     else:
                         values = False
@@ -135,8 +135,12 @@ class MyClient(discord.Client):
             
             if option.content == '1':
                 await message.channel.send(message.author.avatar_url)
-            else:
+            elif option.content == '2':
                 await message.channel.send(message.author.id)
+            elif option.content == '3':
+                await message.channel.send(message.author.created_at)
+            else:
+                await message.channel.send('Unrecognized Input, Terminating...')
 
 intents = discord.Intents.default()
 intents.members = True
