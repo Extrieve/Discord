@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import asyncio
+import re
 from discord.ext import commands
 from datetime import date
 from numpy import random
@@ -35,8 +36,11 @@ class MyClient(discord.Client):
     week = ["Lunes", "Martes", "Miercoles",
         "Jueves", "Viernes", "Sabado", "Domingo"]
 
-    # Get anime quote
+    animeDB = json.load(open(
+        r'D:\Documents\OneDrive - University of South Florida\Python\Discord\anime_db.json', encoding='utf8'))
 
+
+    # Get anime quote
     def getQuote(self):
         # Get Api
         s = requests.Session()
@@ -141,6 +145,34 @@ class MyClient(discord.Client):
                 await message.channel.send(message.author.created_at)
             else:
                 await message.channel.send('Unrecognized Input, Terminating...')
+
+        if message.content.startswith('$animeSearch'):
+            await message.channel.send('Name of Anime: ')
+
+            def longEnough(m):
+                return True if len(m.content) > 2 else False
+            
+            try:
+                name = await self.wait_for('message', check=longEnough, timeout=10)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            # await message.channel.send(f'This is your message: {type(name.content)}')
+            matches = dict()
+            for i in range(len(self.animeDB['data'])):
+                title = self.animeDB['data'][i]['title']
+                if re.search(name.content.lower(), title.lower()):
+                    matches[i] = title
+
+            # await message.channel.send(title)
+            reply_list = list()
+            for i, item in enumerate(matches.values()):
+                reply_list.append(f'{i+1}) {item}')
+            await message.channel.send('\n'.join(reply_list))
+
+            # if not matches:
+            #     await message.channel.send('No entries found')
+
 
 intents = discord.Intents.default()
 intents.members = True
