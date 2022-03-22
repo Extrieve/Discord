@@ -147,10 +147,10 @@ class MyClient(discord.Client):
                 await message.channel.send('Unrecognized Input, Terminating...')
 
         if message.content.startswith('$animeSearch'):
-            await message.channel.send('Name of Anime: ')
+            await message.channel.send('What Anime are you looking for?')
 
             def longEnough(m):
-                return True if len(m.content) > 2 else False
+                return True if len(m.content) > 2 and m.author == message.author else False
             
             try:
                 name = await self.wait_for('message', check=longEnough, timeout=10)
@@ -164,14 +164,32 @@ class MyClient(discord.Client):
                 if re.search(name.content.lower(), title.lower()):
                     matches[i] = title
 
-            # await message.channel.send(title)
+            if not matches:
+                return await message.channel.send('No entries found')
+
             reply_list = list()
             for i, item in enumerate(matches.values()):
                 reply_list.append(f'{i+1}) {item}')
+
+            await message.channel.send('Select an option:')
             await message.channel.send('\n'.join(reply_list))
 
-            # if not matches:
-            #     await message.channel.send('No entries found')
+            def is_correct(m):
+                good_range = True if 0 <= int(m.content) <= len(reply_list) - 1 else False
+                values = True if m.content.isdigit() else False
+                return m.author == message.author and values and good_range
+
+            try:
+                option = await self.wait_for('message', check=is_correct, timeout=10)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['title'])
+            await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['picture'])
+            await message.channel.send(f"Type: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['type']}")
+            await message.channel.send(f"Episodes: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['episodes']}")
+            await message.channel.send(', '.join(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['tags']))
+
 
 
 intents = discord.Intents.default()
