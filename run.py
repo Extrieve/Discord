@@ -175,7 +175,7 @@ class MyClient(discord.Client):
             await message.channel.send('\n'.join(reply_list))
 
             def is_correct(m):
-                good_range = True if 0 <= int(m.content) <= len(reply_list) - 1 else False
+                good_range = True if 0 <= int(m.content) <= len(reply_list) else False
                 values = True if m.content.isdigit() else False
                 return m.author == message.author and values and good_range
 
@@ -184,11 +184,26 @@ class MyClient(discord.Client):
             except asyncio.TimeoutError:
                 return await message.channel.send(f'Sorry, you took too long, terminating request...')
 
-            await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['title'])
-            await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['picture'])
-            await message.channel.send(f"Type: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['type']}")
-            await message.channel.send(f"Episodes: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['episodes']}")
-            await message.channel.send(', '.join(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['tags']))
+            final_res = list()
+            final_res.append(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['title'])
+            final_res.append(
+                f"Type: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['type']}")
+            final_res.append(
+                f"Episodes: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['episodes']}")
+            final_res.append(', '.join(self.animeDB['data'][list(
+                matches.keys())[int(option.content) - 1]]['tags']))
+            final_res.append(self.animeDB['data'][list(matches.keys())[
+                int(option.content) - 1]]['picture'])
+
+            await message.channel.send('\n'.join(final_res))
+
+            # await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['title'])
+            # await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['picture'])
+            # await message.channel.send(f"Type: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['type']}")
+            # await message.channel.send(f"Episodes: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['episodes']}")
+            # await message.channel.send(', '.join(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['tags']))
+
+
 
 
 
