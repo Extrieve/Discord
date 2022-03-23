@@ -39,6 +39,9 @@ class MyClient(discord.Client):
     animeDB = json.load(open(
         r'D:\Documents\OneDrive - University of South Florida\Python\Discord\anime_db.json', encoding='utf8'))
 
+    categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke',
+                  'dance', 'cringe']
+
 
     # Get anime quote
     def getQuote(self):
@@ -196,16 +199,77 @@ class MyClient(discord.Client):
                 int(option.content) - 1]]['picture'])
 
             await message.channel.send('\n'.join(final_res))
+        
+        # if users ask for a joke, then reply to them with a joke
+        # This is the power of copilot
+        if message.content.startswith('$joke'):
+            # get joke from api and send it
+            joke = requests.get('https://icanhazdadjoke.com/', headers={"Accept": "application/json"})
+            await message.channel.send(joke.json()['joke'])
 
-            # await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['title'])
-            # await message.channel.send(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['picture'])
-            # await message.channel.send(f"Type: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['type']}")
-            # await message.channel.send(f"Episodes: {self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['episodes']}")
-            # await message.channel.send(', '.join(self.animeDB['data'][list(matches.keys())[int(option.content) - 1]]['tags']))
+        # Copilot did this
+        # if users ask a question, then reply to them with an answer
+        if message.content.startswith('$question'):
+            await message.channel.send('What is your question?')
+            try:
+                question = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
 
+            # get answer from api and send it
+            # make request verification false so that we can get the answer
+            s = requests.Session()
+            s.verify = False
+            
+            # reply to their question with a random fact about cars
+            # get a random fact about cars
+            fact = s.get('https://catfact.ninja/fact')
+            await message.channel.send(f'{question.content} You ask? Well...\n{fact.json()["fact"]}')
+            
+        # if users ask for an anime picture, then reply to them with a picture
+        if message.content.startswith('$animePic'):
+            # ask them if they want a picture from a random tag or a specific tag
+            await message.channel.send('Would you like a picture from a random tag or a specific tag?')
 
+            # if the users asked for a random tag reply with a random picture using tags from self.categories
+            try:
+                option = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+            
+            if option.content.lower() == 'random':
+                # get a random tag
+                rand = random.randint(0, len(self.categories))
+                category = self.categories[rand]
+                # get a random picture from that tag
+                response = requests.get(
+                    f'https://api.waifu.pics/sfw/{category}').text
+                # get the picture url
+                pic = json.loads(response)['url']
+                # send the picture
+                await message.channel.send(pic)
+            else:
+                # Display all tags to user from self.categories
+                await message.channel.send('Here are all the tags:')
+                await message.channel.send(', '.join(self.categories))
 
-
+                # Make sure the user is asking for a tag that exists
+                def is_correct(m):
+                    return m.author == message.author and m.content.lower() in self.categories
+                
+                try:
+                    option = await self.wait_for('message', check=is_correct, timeout=12)
+                except asyncio.TimeoutError:
+                    # tell the user their option is not valid
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+                
+                # get picture from user option
+                response = requests.get(
+                    f'https://api.waifu.pics/sfw/{option.content.lower()}').text
+                pic = json.loads(response)['url']
+                # send the picture
+                await message.channel.send(pic)
+                
 
 intents = discord.Intents.default()
 intents.members = True
