@@ -36,8 +36,10 @@ class MyClient(discord.Client):
     week = ["Lunes", "Martes", "Miercoles",
         "Jueves", "Viernes", "Sabado", "Domingo"]
 
+    workingD = os.getcwd()
+
     animeDB = json.load(open(
-        r'D:\Documents\OneDrive - University of South Florida\Python\Discord\anime_db.json', encoding='utf8'))
+        f'{workingD}/anime_db.json', encoding='utf8'))
 
     categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke',
                   'dance', 'cringe']
@@ -51,8 +53,6 @@ class MyClient(discord.Client):
         response = s.get('https://animechan.vercel.app/api/random')
         # Transform into json
         json_data = json.loads(response.text)
-        # quote = json_data['quote'] + ' | Character: ' + \
-        #     json_data['character'] + ' | Series: ' + json_data['anime']
 
         quote = f"Quote: {json_data['quote']}\nCharacter: {json_data['character']}\nSeries: {json_data['anime']}"
         return quote
@@ -76,10 +76,11 @@ class MyClient(discord.Client):
         else:
             return f'Hoy es: {today}'
 
-    
-    # def get_roles(self):
-    #     roles = discord.utils.get(member.server.roles)
-    #     return ", ".join([str(r.id) for r in roles.roles])
+    def getDefinition(self, word):
+        response = requests.get(
+            f'https://api.dictionaryapi.dev/api/v2/entries/en/{word}')
+        processedResponse = json.loads(response.text)
+        return f"Definition: {processedResponse[0]['meanings'][0]['definitions'][0]['definition']}"
 
 
     async def on_ready(self):
@@ -99,14 +100,6 @@ class MyClient(discord.Client):
     async def on_message(self, message):
         if message.author == client.user:
             return
-
-        # if message.content.startswith('$utils'):
-        #     mydir = f'These are the dirs\n{dir(discord.utils.get)}'
-        #     await message.channel.send(mydir)
-
-        # if message.content.startswith('$directories'):
-        #     mydir = f'These are the dirs\n{dir(self)}'
-        #     await message.channel.send(mydir)
 
         if message.content.startswith('$hello'):
             await message.channel.send('Hello!')
@@ -269,6 +262,24 @@ class MyClient(discord.Client):
                 pic = json.loads(response)['url']
                 # send the picture
                 await message.channel.send(pic)
+
+        if message.content.startswith('$definition'):
+            await message.channel.send('What word would you like to define?')
+            try:
+                word = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            # get the definition from the dictionary
+            try:
+                definition = self.getDefinition(word.content)
+            except KeyError:
+                return await message.channel.send(f'Sorry, {word.content} is not in the dictionary')
+
+            if definition:
+                await message.channel.send(definition)
+            else:
+                return await message.channel.send('Sorry, that word is not in the dictionary')
                 
 
 intents = discord.Intents.default()
