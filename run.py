@@ -280,6 +280,12 @@ class MyClient(discord.Client):
                 await message.channel.send(definition)
             else:
                 return await message.channel.send('Sorry, that word is not in the dictionary')
+
+        if message.content.startswith('$yomomma'):
+            # get a random joke from the api
+            yomomma = requests.get(
+                'https://yomomma-api.herokuapp.com/jokes').text
+            await message.channel.send(json.loads(yomomma)['joke'])
                 
 
 intents = discord.Intents.default()
