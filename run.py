@@ -286,6 +286,12 @@ class MyClient(discord.Client):
             yomomma = requests.get(
                 'https://yomomma-api.herokuapp.com/jokes').text
             await message.channel.send(json.loads(yomomma)['joke'])
+
+        if message.content.startswith('$randomFact'):
+            # get a random fact from the api
+            fact = requests.get('https://api.aakhilv.me/fun/facts').text
+            fact = fact.replace('[', '').replace(']', '').replace('"', '')
+            await message.channel.send(f'Did you know that {fact}')
                 
 
 intents = discord.Intents.default()
