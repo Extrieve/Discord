@@ -290,9 +290,9 @@ class MyClient(discord.Client):
         if message.content.startswith('$yomomma'):
             # get a random joke from the api
             yomomma = requests.get(
-                'https://yomomma-api.herokuapp.com/jokes').text
+                'https://yomomma-api.herokuapp.com/jokes')
             if yomomma:
-                await message.channel.send(json.loads(yomomma)['joke'])
+                await message.channel.send(json.loads(yomomma.text)['joke'])
             else:
                 return await message.channel.send('Sorry, there was an error getting yo momma')
 
