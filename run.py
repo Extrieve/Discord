@@ -81,6 +81,12 @@ class MyClient(discord.Client):
             f'https://api.dictionaryapi.dev/api/v2/entries/en/{word}')
         processedResponse = json.loads(response.text)
         return f"Definition: {processedResponse[0]['meanings'][0]['definitions'][0]['definition']}"
+    
+    def getImage(self, search):
+        response = requests.get(
+            f'https://imsea.herokuapp.com/api/1?q=<{search}>')
+        response_json = json.loads(response.text)
+        return response_json['results']
 
 
     async def on_ready(self):
@@ -285,13 +291,30 @@ class MyClient(discord.Client):
             # get a random joke from the api
             yomomma = requests.get(
                 'https://yomomma-api.herokuapp.com/jokes').text
-            await message.channel.send(json.loads(yomomma)['joke'])
+            if yomomma:
+                await message.channel.send(json.loads(yomomma)['joke'])
+            else:
+                return await message.channel.send('Sorry, there was an error getting yo momma')
 
         if message.content.startswith('$randomFact'):
             # get a random fact from the api
             fact = requests.get('https://api.aakhilv.me/fun/facts').text
             fact = fact.replace('[', '').replace(']', '').replace('"', '')
             await message.channel.send(f'Did you know that {fact}')
+
+        if message.content.startswith('$imageSearch'):
+            await message.channel.send('What would you like to search for?')
+            try:
+                search = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            # get the image from the api
+            response = self.getImage(search.content)
+            if response:
+                await message.channel.send(response[0])
+            else:
+                return await message.channel.send('Sorry, that search did not return any results')
                 
 
 intents = discord.Intents.default()
