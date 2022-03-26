@@ -315,7 +315,42 @@ class MyClient(discord.Client):
                 await message.channel.send(response[0])
             else:
                 return await message.channel.send('Sorry, that search did not return any results')
-                
+
+        if message.content.startswith('$shortURL'):
+            await message.channel.send('What would you like to shorten?')
+            try:
+                url = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            # check if url exists
+            if requests.get(url.content).status_code == 200:
+                r = requests.get("https://api.1pt.co/addURL",
+                                 params={"long": url.content})
+                await message.channel.send(f'Here is your shortened URL: 1pt.co/{r.json()["short"]}')
+
+        if message.content.startswith('$translate'):
+            await message.channel.send('1) Translate\n2) Available languages')
+            try:
+                word = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            # get the translation from the api
+            if word.content == '1':
+                await message.channel.send('TODO: Complete option 1')
+            elif word.content == '2':
+                request = requests.get('https://libretranslate.com/languages')
+                if request:
+                    response = json.loads(request.text)
+                    langs = list()
+
+                    for item in response:
+                        langs.append(item['name'])
+                    
+                    await message.channel.send(', '.join(langs))
+            else:
+                return await message.channel.send('Sorry, that is not a valid option')
 
 intents = discord.Intents.default()
 intents.members = True
