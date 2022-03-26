@@ -350,7 +350,7 @@ class MyClient(discord.Client):
                     return await message.channel.send(f'Sorry, you took too long, terminating request...')
 
                 if sentence.content:
-                    req = requests.post('https://libretranslate.de/detect',
+                    req = requests.post('https://translate.api.skitzen.com/detect',
                                         params={'q': sentence.content}, verify=False)
                     response = req.text.replace('[', '').replace(']', '')
                     lang = json.loads(response)['language']
