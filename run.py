@@ -329,7 +329,7 @@ class MyClient(discord.Client):
                                  params={"long": url.content})
                 await message.channel.send(f'Here is your shortened URL: 1pt.co/{r.json()["short"]}')
 
-        if message.content.startswith('$translate'):
+        if message.content.startswith('$aaron'):
             await message.channel.send('1) Translate\n2) Available languages')
             try:
                 word = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
@@ -338,7 +338,38 @@ class MyClient(discord.Client):
 
             # get the translation from the api
             if word.content == '1':
-                await message.channel.send('TODO: Complete option 1')
+                
+                langs = {'english': 'en', 'arabic': 'ar', 'azerbaijani': 'az', 'chinese': 'zh', 'czech': 'cs', 'dutch': 'nl', 'esperanto': 'eo', 'finnish': 'fi', 'french': 'fr', 'german': 'de', 'greek': 'el', 'hindi': 'hi', 'hungarian': 'hu', 'indonesian': 'id',
+                        'irish': 'ga', 'italian': 'it', 'japanese': 'ja', 'korean': 'ko', 'persian': 'fa', 'polish': 'pl', 'portuguese': 'pt', 'russian': 'ru', 'slovak': 'sk', 'spanish': 'es', 'swedish': 'sv', 'turkish': 'tr', 'ukranian': 'uk', 'vietnamese': 'vi'}
+
+                await message.channel.send('Specify your sentence to translate')
+
+                try:
+                    sentence = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                if sentence.content:
+                    req = requests.post('https://libretranslate.de/detect',
+                                        params={'q': sentence.content}, verify=False)
+                    response = req.text.replace('[', '').replace(']', '')
+                    lang = json.loads(response)['language']
+                    
+                    await message.channel.send(f'What is your target language?')
+
+                    try:
+                        target = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+                    except asyncio.TimeoutError:
+                        return await message.channel.send(f'Sorry, you took too long, terminating request...')
+                    
+                    if target.content.lower() in langs:
+                        target = langs[target.content.lower()]
+                        req = requests.post('https://libretranslate.de/translate',
+                                            params={'q': sentence.content, 'source': lang, 'target': target}).text
+                        final = json.loads(req)['translatedText']
+                        await message.channel.send(final)
+
+                
             elif word.content == '2':
                 request = requests.get('https://libretranslate.com/languages')
                 if request:
