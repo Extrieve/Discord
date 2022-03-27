@@ -198,6 +198,73 @@ class MyClient(discord.Client):
                 int(option.content) - 1]]['picture'])
 
             await message.channel.send('\n'.join(final_res))
+
+        if message.content.startswith('$aniSearch'):
+            await message.channel.send('What Anime are you looking for?')
+
+            def longEnough(m):
+                return True if len(m.content) > 2 and m.author == message.author else False
+            
+            try:
+                search = await self.wait_for('message', check=longEnough, timeout=10)
+                if len(search.content) <= 2:
+                    return await message.channel.send('Search term too short, terminating request...')
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            base_url = 'https://api.jikan.moe/v4/anime'
+            request = requests.get(base_url, params={'q': search.content}, verify=False)
+
+            if request.status_code == 200:
+                data = json.loads(request.text)
+                results = []
+                for i, result in enumerate(data['data']):
+                    results.append(f"{i+1}) {result['title']}")
+
+                await message.channel.send('Select an option:')
+                await message.channel.send('\n'.join(results))
+                
+                def is_correct(m):
+                    values = True if m.content.isdigit() else False
+                    return m.author == message.author and values
+                
+                try:
+                    choice = await self.wait_for('message', check=is_correct, timeout=10)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                choice = int(choice.content) - 1
+
+                if choice > len(data['data']) or choice <= 0:
+                    return await message.channel.send('Invalid choice, terminating request...')
+
+                final_res = []
+                try:
+                    final_res.append(data['data'][choice]['title'])
+                    final_res.append(f"Score: {data['data'][choice]['score']}")
+                    final_res.append(f"Rated: {data['data'][choice]['rating']}")
+                    final_res.append(f"Popularity Ranking: {data['data'][choice]['popularity']}")
+                    final_res.append(
+                        f"Studio: {data['data'][choice]['studios'][0]['name']}")
+                    final_res.append(data['data'][choice]['synopsis'])
+                    final_res.append(data['data'][choice]
+                                     ['images']['jpg']['large_image_url'])
+                except (KeyError, IndexError):
+                    final_res = []
+                    final_res.append(data['data'][choice]['title'])
+                    final_res.append(f"Score: {data['data'][choice]['score']}")
+                    final_res.append(
+                        f"Rated: {data['data'][choice]['rating']}")
+                    final_res.append(
+                        f"Popularity Ranking: {data['data'][choice]['popularity']}")
+                    final_res.append(data['data'][choice]['synopsis'])
+                    final_res.append(data['data'][choice]
+                                     ['images']['jpg']['large_image_url'])
+
+                await message.channel.send('\n'.join(final_res))
+                # await message.channel.send(final_res)
+            else:
+                return await message.channel.send('No entries found')
         
         # if users ask for a joke, then reply to them with a joke
         # This is the power of copilot
