@@ -7,6 +7,7 @@ import re
 from discord.ext import commands
 from datetime import date
 from numpy import random
+from serpapi import GoogleSearch
 from dotenv import load_dotenv
 
 # Create environment variables
@@ -37,6 +38,8 @@ class MyClient(discord.Client):
         "Jueves", "Viernes", "Sabado", "Domingo"]
 
     workingD = os.getcwd()
+
+    searchKey = os.getenv('SER_KEY')
 
     animeDB = json.load(open(
         f'{workingD}/anime_db.json', encoding='utf8'))
@@ -82,12 +85,22 @@ class MyClient(discord.Client):
         processedResponse = json.loads(response.text)
         return f"Definition: {processedResponse[0]['meanings'][0]['definitions'][0]['definition']}"
     
-    def getImage(self, search):
-        response = requests.get(
-            f'https://imsea.herokuapp.com/api/1?q=<{search}>')
-        response_json = json.loads(response.text)
-        return response_json['results']
+    # def getImage(self, search):
+    #     response = requests.get(
+    #         f'https://imsea.herokuapp.com/api/1?q=<{search}>')
+    #     response_json = json.loads(response.text)
+    #     return response_json['results']
 
+    def getImage(self, search):
+        params = {
+            'q': search,
+            'tbm': 'isch',
+            'ijn': '0',
+            'api_key': os.getenv('SER_KEY')
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        return results['images_results'][0]
 
     async def on_ready(self):
         print('Logged in as')
@@ -379,7 +392,7 @@ class MyClient(discord.Client):
             # get the image from the api
             response = self.getImage(search.content)
             if response:
-                await message.channel.send(response[0])
+                await message.channel.send(response['original'])
             else:
                 return await message.channel.send('Sorry, that search did not return any results')
 
