@@ -507,6 +507,12 @@ class MyClient(discord.Client):
                 await message.channel.send(choice[decision][option])
             else:
                 await message.channel.send('Sorry, that is not a valid option')
+        
+        if message.content.startswith('$servers'):
+            await message.channel.send(f"I'm in {len(self.guilds)} servers")
+
+        if message.content.startswith('$roles'):
+            await message.channel.send(f"The list of roles are: {', '.join([role.name for role in message.guild.roles if 'everyone' not in role.name])}")
 
 
 intents = discord.Intents.default()
