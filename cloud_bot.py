@@ -7,7 +7,8 @@ import re
 from discord.ext import commands
 from datetime import date
 from numpy import random
-from run import keep_alive
+from serpapi import GoogleSearch
+from keep_running import keep_alive
 
 
 class MyClient(discord.Client):
@@ -35,8 +36,13 @@ class MyClient(discord.Client):
 
     workingD = os.getcwd()
 
+    searchKey = os.environ['SER_KEY']
+
     animeDB = json.load(open(
         f'{workingD}/anime_db.json', encoding='utf8'))
+
+    animeFun = json.load(open(
+        f'{workingD}/ops_eds.json', encoding='utf8'))
 
     categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke',
                   'dance', 'cringe']
@@ -78,25 +84,22 @@ class MyClient(discord.Client):
         processedResponse = json.loads(response.text)
         return f"Definition: {processedResponse[0]['meanings'][0]['definitions'][0]['definition']}"
 
+    # def getImage(self, search):
+    #     response = requests.get(
+    #         f'https://imsea.herokuapp.com/api/1?q=<{search}>')
+    #     response_json = json.loads(response.text)
+    #     return response_json['results']
+
     def getImage(self, search):
-        response = requests.get(
-            f'https://imsea.herokuapp.com/api/1?q=<{search}>')
-        response_json = json.loads(response.text)
-        return response_json['results']
-
-    async def on_ready(self):
-        print('Logged in as')
-        print(self.user.name)
-        print(self.user.id)
-        print('------')
-
-    async def on_member_join(self, member):
-        guild = member.guild
-        if guild.system_channel is not None:
-            role = discord.utils.get(member.guild.roles, name="Normies")
-            member.add_role(role)
-            to_send = f'Welcome {member.mention} to {guild.name}'
-            await guild.system_channel.send(to_send)
+        params = {
+            'q': search,
+            'tbm': 'isch',
+            'ijn': '0',
+            'api_key': self.searchKey
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        return results['images_results'][0]
 
     async def on_message(self, message):
         if message.author == client.user:
@@ -233,7 +236,7 @@ class MyClient(discord.Client):
 
                 choice = int(choice.content) - 1
 
-                if choice > len(data['data']) or choice <= 0:
+                if choice >= len(data['data']) or choice < 0:
                     return await message.channel.send('Invalid choice, terminating request...')
 
                 final_res = []
@@ -380,7 +383,7 @@ class MyClient(discord.Client):
             # get the image from the api
             response = self.getImage(search.content)
             if response:
-                await message.channel.send(response[0])
+                await message.channel.send(response['original'])
             else:
                 return await message.channel.send('Sorry, that search did not return any results')
 
@@ -442,10 +445,64 @@ class MyClient(discord.Client):
             else:
                 return await message.channel.send('Sorry, that is not a valid option')
 
+        if message.content.startswith('$anime'):
+            await message.channel.send('What anime would you like to search for?')
+
+            try:
+                search = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            if len(search.content) < 3:
+                return await message.channel.send('Sorry, use at least 4 search characters')
+
+            results = []
+            for i, item in enumerate(self.animeFun):
+                title = item['title']
+                if search.content.lower() in title.lower():
+                    results.append((i, title))
+
+            if results:
+                search_results = []
+                await message.channel.send('Choose an option:')
+                for i in range(len(results)):
+                    search_results.append(f'{i + 1}) {results[i][1]}')
+
+                await message.channel.send('\n'.join(search_results))
+
+                try:
+                    choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                if int(choice.content) <= 0 and int(choice.content) > len(results):
+                    return await message.channel.send('Sorry, that is not a valid option')
+
+                index = results[int(choice.content) - 1][0]
+                choice = self.animeFun[index]
+
+                if choice['openings']:
+                    await message.channel.send(f'Select between {len(choice["openings"])} openings')
+
+                try:
+                    option = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                option = int(option.content) - 1
+
+                if 0 <= option < len(choice['openings']):
+                    await message.channel.send(choice['openings'][option])
+                else:
+                    await message.channel.send('Sorry, that is not a valid option')
+
+            else:
+                return await message.channel.send('Sorry, that search did not return any results')
+
 
 intents = discord.Intents.default()
 intents.members = True
 
 client = MyClient()
 keep_alive()
-client.run(os.environ['token'])
+client.run(os.environ['TOKEN'])

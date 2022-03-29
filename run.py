@@ -41,8 +41,9 @@ class MyClient(discord.Client):
 
     searchKey = os.getenv('SER_KEY')
 
-    animeDB = json.load(open(
-        f'{workingD}/anime_db.json', encoding='utf8'))
+    animeDB = json.load(open(f'{workingD}/anime_db.json', encoding='utf8'))
+
+    animeFun = json.load(open(f'{workingD}/ops_eds.json', encoding='utf8'))
 
     categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke',
                   'dance', 'cringe']
@@ -449,11 +450,67 @@ class MyClient(discord.Client):
                         final = json.loads(req)['translatedText']
                         await message.channel.send(final)
 
-                
             elif word.content == '2':    
                 await message.channel.send(', '.join(langs.keys()))
             else:
                 return await message.channel.send('Sorry, that is not a valid option')
+        
+        if message.content.startswith('$anime'):
+            await message.channel.send('What anime would you like to search for?')
+
+            try:
+                search = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            if len(search.content) < 3:
+                return await message.channel.send('Sorry, use at least 4 search characters')
+
+            results = []
+            for i, item in enumerate(self.animeFun):
+                title = item['title']
+                if search.content.lower() in title.lower():
+                    results.append((i, title))
+            
+            if results:
+                search_results = []
+                await message.channel.send('Choose an option:')
+                for i in range(len(results)):
+                    search_results.append(f'{i + 1}) {results[i][1]}')
+                    
+                await message.channel.send('\n'.join(search_results))
+                
+                try:
+                    choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+                
+                if int(choice.content) <= 0 and int(choice.content) > len(results):
+                    return await message.channel.send('Sorry, that is not a valid option')
+
+                index = results[int(choice.content) - 1][0]
+                choice = self.animeFun[index]
+
+                if choice['openings']:
+                    await message.channel.send(f'Select between {len(choice["openings"])} openings')
+                
+                try:
+                    option = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+                
+                option = int(option.content) - 1
+
+                if 0 <= option < len(choice['openings']):
+                    await message.channel.send(choice['openings'][option])
+                else:
+                    await message.channel.send('Sorry, that is not a valid option')
+
+
+            else:
+                return await message.channel.send('Sorry, that search did not return any results')
+
+        
 
 intents = discord.Intents.default()
 intents.members = True
