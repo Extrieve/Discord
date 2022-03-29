@@ -43,11 +43,12 @@ class MyClient(discord.Client):
 
     animeDB = json.load(open(f'{workingD}/anime_db.json', encoding='utf8'))
 
-    animeFun = json.load(open(f'{workingD}/ops_eds.json', encoding='utf8'))
+    animeFun = json.load(open(f'{workingD}/ops_eds1.json', encoding='utf8'))
 
-    categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke',
-                  'dance', 'cringe']
+    missing_list = json.load(open(f'{workingD}/missing_list.json', encoding='utf8'))
 
+    categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile',
+                  'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke', 'dance', 'cringe']
 
     # Get anime quote
     def getQuote(self):
@@ -524,6 +525,24 @@ class MyClient(discord.Client):
 
         if message.content.startswith('$roles'):
             await message.channel.send(f"The list of roles are: {', '.join([role.name for role in message.guild.roles if 'everyone' not in role.name])}")
+
+        if message.content.startswith('$missing'):
+            await message.channel.send('Which title is missing?')
+
+            try:
+                title = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=15)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            if title.content in self.missing_list:
+                return await message.channel.send('Sorry, that title is already in the list')
+            
+            if title.content:
+                self.missing_list[title.content] = True
+                json.dump(self.missing_list, open('missing_list.json', 'w'))
+                await message.channel.send('Added to the list')
+            else:
+                await message.channel.send('Write the full title of the anime pls')
 
         
 
