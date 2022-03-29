@@ -456,59 +456,68 @@ class MyClient(discord.Client):
                 return await message.channel.send('Sorry, that is not a valid option')
         
         if message.content.startswith('$anime'):
-            await message.channel.send('What anime would you like to search for?')
+            search = message.content.replace('$anime ', '')
 
-            try:
-                search = await self.wait_for('message', check=lambda m: m.author == message.author, timeout=12)
-            except asyncio.TimeoutError:
-                return await message.channel.send(f'Sorry, you took too long, terminating request...')
-
-            if len(search.content) < 3:
-                return await message.channel.send('Sorry, use at least 4 search characters')
+            if len(search) <= 3:
+                return await message.channel.send('Sorry, you need to specify at least 4 characters')
 
             results = []
             for i, item in enumerate(self.animeFun):
                 title = item['title']
-                if search.content.lower() in title.lower():
+                if search.lower() in title.lower():
                     results.append((i, title))
             
-            if results:
-                search_results = []
-                await message.channel.send('Choose an option:')
-                for i in range(len(results)):
-                    search_results.append(f'{i + 1}) {results[i][1]}')
-                    
-                await message.channel.send('\n'.join(search_results))
-                
-                try:
-                    choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
-                except asyncio.TimeoutError:
-                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
-                
-                if int(choice.content) <= 0 and int(choice.content) > len(results):
-                    return await message.channel.send('Sorry, that is not a valid option')
-
-                index = results[int(choice.content) - 1][0]
-                choice = self.animeFun[index]
-
-                if choice['openings']:
-                    await message.channel.send(f'Select between {len(choice["openings"])} openings')
-                
-                try:
-                    option = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
-                except asyncio.TimeoutError:
-                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
-                
-                option = int(option.content) - 1
-
-                if 0 <= option < len(choice['openings']):
-                    await message.channel.send(choice['openings'][option])
-                else:
-                    await message.channel.send('Sorry, that is not a valid option')
-
-
-            else:
+            if not results:
                 return await message.channel.send('Sorry, that search did not return any results')
+
+            search_results = []
+            await message.channel.send('Choose an option:')
+            for i in range(len(results)):
+                search_results.append(f'{i + 1}) {results[i][1]}')
+                
+            await message.channel.send('\n'.join(search_results))
+            
+            try:
+                choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+            
+            
+            if int(choice.content) <= 0 and int(choice.content) > len(results):
+                return await message.channel.send('Sorry, that is not a valid option')
+
+            await message.channel.send('--Select a number--\n1) Opening\n2) Ending')
+
+            try:
+                decision = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+            decision = int(decision.content) - 1
+            if decision < 0 or decision > 1:
+                return await message.channel.send('Sorry, that is not a valid option')
+
+            decision = ['openings', 'endings'][decision]
+
+            index = results[int(choice.content) - 1][0]
+            choice = self.animeFun[index]
+
+            if len(choice[decision]) > 0:
+                await message.channel.send(f'Select between {len(choice[decision])} {decision}')
+            else:
+                return await message.channel.send(f'Sorry, that anime has no {decision}')
+            
+            try:
+                option = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit, timeout=12)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+            
+            option = int(option.content) - 1
+
+            if 0 <= option < len(choice[decision]):
+                await message.channel.send(choice[decision][option])
+            else:
+                await message.channel.send('Sorry, that is not a valid option')
 
         
 
