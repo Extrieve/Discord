@@ -47,6 +47,10 @@ class MyClient(discord.Client):
 
     missing_list = json.load(open(f'{workingD}/missing_list.json', encoding='utf8'))
 
+    anime_data = json.load(open(f'{workingD}/anime_database.json', encoding='utf8'))
+
+    themes_data = json.load(open(f'{workingD}/themes.json', encoding='utf8'))
+
     categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile',
                   'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke', 'dance', 'cringe']
 
@@ -543,6 +547,111 @@ class MyClient(discord.Client):
                 await message.channel.send('Added to the list')
             else:
                 await message.channel.send('Write the full title of the anime pls')
+
+        if message.content.startswith('$ani'):
+            search = message.content.replace('$ani ', '').lower()
+
+            if len(search) < 4:
+                return await message.channel.send('Sorry, you need to specify at least 4 characters')
+
+            display = []
+            matches = []
+            count = 1
+
+            for i, item in enumerate(self.anime_data):
+                titles = item['title'].split('|')
+                for title in titles:
+                    if search in title.lower():
+                        display.append(f'{count}) {titles[0]}')
+                        count += 1
+                        matches.append(item['anime_id'])
+                        break
+
+            if not matches:
+                return await message.channel.send('Sorry, that search did not return any results')
+            
+            await message.channel.send('Choose an option:')
+            await message.channel.send('\n'.join(display))
+
+            try:
+                choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=15)
+            except asyncio.TimeoutError:
+                return await message.channel.send(f'Sorry, you took too long, terminating request...')
+            
+            choice = int(choice.content) - 1
+            if choice < 0 or choice > len(matches):
+                return await message.channel.send('Sorry, that is not a valid option')
+            
+            search = matches[choice]
+
+            ops, eds = [], []
+            for item in self.themes_data:
+                if item['anime_id'] == search:
+                    current = item['mirrors'][0]['mirror']
+                    ops.append(current) if 'OP' in current else eds.append(current)
+
+            if ops and eds:
+                await message.channel.send(f'1) Openings\n2) Endings')
+                try:
+                    decision = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=10)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+                
+                decision = int(decision.content) - 1
+                if decision < 0 or decision > 1:
+                    return await message.channel.send('Sorry, that is not a valid option')
+
+                if decision == 0:
+                    await message.channel.send(f'Choose between {len(ops)} opening(s)')
+                    try:
+                        choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=10)
+                    except asyncio.TimeoutError:
+                        return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                    choice = int(choice.content) - 1
+                    if choice < 0 or choice > len(ops):
+                        return await message.channel.send('Sorry, that is not a valid option')
+                    
+                    return await message.channel.send(ops[choice])
+                else:
+                    await message.channel.send(f'Choose between {len(eds)} ending(s)')
+                    try:
+                        choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=10)
+                    except asyncio.TimeoutError:
+                        return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                    choice = int(choice.content) - 1
+                    if choice < 0 or choice > len(ops):
+                        return await message.channel.send('Sorry, that is not a valid option')
+
+                    return await message.channel.send(ops[choice])
+
+            elif ops and not eds:
+                await message.channel.send(f'Choose between {len(ops)} opening(s)')
+                try:
+                    choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=10)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                choice = int(choice.content) - 1
+                if choice < 0 or choice > len(ops):
+                    return await message.channel.send('Sorry, that is not a valid option')
+
+                    return await message.channel.send(ops[choice])
+            elif eds and not ops:
+                await message.channel.send(f'Choose between {len(eds)} ending(s)')
+                try:
+                    choice = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit(), timeout=10)
+                except asyncio.TimeoutError:
+                    return await message.channel.send(f'Sorry, you took too long, terminating request...')
+
+                choice = int(choice.content) - 1
+                if choice < 0 or choice > len(ops):
+                    return await message.channel.send('Sorry, that is not a valid option')
+
+                return await message.channel.send(ops[choice])
+            else:
+                return await message.channel.send('Sorry, that anime has no openings or endings in the database')
 
         
 
