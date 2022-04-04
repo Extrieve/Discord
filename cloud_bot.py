@@ -9,6 +9,7 @@ from datetime import date
 from numpy import random
 from serpapi import GoogleSearch
 from keep_running import keep_alive
+from google.cloud import vision
 
 
 class MyClient(discord.Client):
@@ -35,6 +36,8 @@ class MyClient(discord.Client):
             "Jueves", "Viernes", "Sabado", "Domingo"]
 
     workingD = os.getcwd()
+
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'google_vision.json'
 
     searchKey = os.environ['SER_KEY']
 
@@ -108,6 +111,27 @@ class MyClient(discord.Client):
         search = GoogleSearch(params)
         results = search.get_dict()
         return results['images_results'][0]
+
+    def detect_labels_uri(self, uri):
+        """Detects labels in the file located in Google Cloud Storage or on the
+        Web."""
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image()
+        image.source.image_uri = uri
+
+        response = client.label_detection(image=image)
+        labels = response.label_annotations
+        output = []
+        for label in labels:
+            output.append(f'{label.description} {label.score:.2f}')
+
+        if response.error.message:
+            raise Exception(
+                '{}\nFor more info on error messages, check: '
+                'https://cloud.google.com/apis/design/errors'.format(
+                    response.error.message))
+
+        return '\n'.join(output)
 
     async def on_message(self, message):
         if message.author == client.user:
@@ -630,7 +654,7 @@ class MyClient(discord.Client):
                 if choice < 0 or choice > len(ops):
                     return await message.channel.send('Sorry, that is not a valid option')
 
-                    return await message.channel.send(ops[choice])
+                return await message.channel.send(ops[choice])
             elif eds and not ops:
                 await message.channel.send(f'Choose between {len(eds)} ending(s)')
                 try:
@@ -645,6 +669,17 @@ class MyClient(discord.Client):
                 return await message.channel.send(ops[choice])
             else:
                 return await message.channel.send('Sorry, that anime has no openings or endings in the database')
+
+        if message.content.startswith('$imgRec'):
+            url = message.content.split(' ')[1]
+            if not url:
+                return await message.channel.send('Sorry, you need to specify a url')
+
+            if 'png' not in url and 'jpg' not in url and 'webp' not in url and 'jpeg' not in url:
+                return await message.channel.send('Sorry, that url is not a valid image')
+
+            output = self.detect_labels_uri(url)
+            await message.channel.send(output)
 
 
 intents = discord.Intents.default()

@@ -9,6 +9,7 @@ from datetime import date
 from numpy import random
 from serpapi import GoogleSearch
 from dotenv import load_dotenv
+from google.cloud import vision
 
 # Create environment variables
 load_dotenv()
@@ -37,19 +38,21 @@ class MyClient(discord.Client):
     week = ["Lunes", "Martes", "Miercoles",
         "Jueves", "Viernes", "Sabado", "Domingo"]
 
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'db/google_vision.json'
+
     workingD = os.getcwd()
 
     searchKey = os.getenv('SER_KEY')
 
-    animeDB = json.load(open(f'{workingD}/anime_db.json', encoding='utf8'))
+    animeDB = json.load(open(f'{workingD}/db/anime_db.json', encoding='utf8'))
 
-    animeFun = json.load(open(f'{workingD}/ops_eds1.json', encoding='utf8'))
+    animeFun = json.load(open(f'{workingD}/db/ops_eds1.json', encoding='utf8'))
 
-    missing_list = json.load(open(f'{workingD}/missing_list.json', encoding='utf8'))
+    missing_list = json.load(open(f'{workingD}/db/missing_list.json', encoding='utf8'))
 
-    anime_data = json.load(open(f'{workingD}/anime_database.json', encoding='utf8'))
+    anime_data = json.load(open(f'{workingD}/db/anime_database.json', encoding='utf8'))
 
-    themes_data = json.load(open(f'{workingD}/themes.json', encoding='utf8'))
+    themes_data = json.load(open(f'{workingD}/db/themes.json', encoding='utf8'))
 
     categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile',
                   'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke', 'dance', 'cringe']
@@ -107,6 +110,27 @@ class MyClient(discord.Client):
         search = GoogleSearch(params)
         results = search.get_dict()
         return results['images_results'][0]
+
+    def detect_labels_uri(self, uri):
+        """Detects labels in the file located in Google Cloud Storage or on the
+        Web."""
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image()
+        image.source.image_uri = uri
+
+        response = client.label_detection(image=image)
+        labels = response.label_annotations
+        output = []
+        for label in labels:
+            output.append(f'{label.description} {label.score:.2f}')
+
+        if response.error.message:
+            raise Exception(
+                '{}\nFor more info on error messages, check: '
+                'https://cloud.google.com/apis/design/errors'.format(
+                    response.error.message))
+
+        return '\n'.join(output)
 
     async def on_ready(self):
         print('Logged in as')
@@ -543,7 +567,7 @@ class MyClient(discord.Client):
             
             if title.content:
                 self.missing_list[title.content] = True
-                json.dump(self.missing_list, open('missing_list.json', 'w'))
+                json.dump(self.missing_list, open('db/missing_list.json', 'w'))
                 await message.channel.send('Added to the list')
             else:
                 await message.channel.send('Write the full title of the anime pls')
@@ -637,7 +661,7 @@ class MyClient(discord.Client):
                 if choice < 0 or choice > len(ops):
                     return await message.channel.send('Sorry, that is not a valid option')
 
-                    return await message.channel.send(ops[choice])
+                return await message.channel.send(ops[choice])
             elif eds and not ops:
                 await message.channel.send(f'Choose between {len(eds)} ending(s)')
                 try:
@@ -652,6 +676,17 @@ class MyClient(discord.Client):
                 return await message.channel.send(ops[choice])
             else:
                 return await message.channel.send('Sorry, that anime has no openings or endings in the database')
+
+        if message.content.startswith('$imgRec'):
+            url = message.content.split(' ')[1]
+            if not url:
+                return await message.channel.send('Sorry, you need to specify a url')
+            
+            if 'png' not in url and 'jpg' not in url and 'webp' not in url and 'jpeg' not in url:
+                return await message.channel.send('Sorry, that url is not a valid image')
+
+            output = self.detect_labels_uri(url)
+            await message.channel.send(output)
 
         
 
