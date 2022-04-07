@@ -149,6 +149,7 @@ class MyClient(discord.Client):
                 if result['mal_id'] in self.registered_ids:
                     names.append(f"{count}) {result['title']}")
                     anime_ids.append(result['mal_id'])
+                    count += 1
             return list(zip(names, anime_ids))
         else:
             return [], []
