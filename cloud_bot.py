@@ -4,6 +4,7 @@ import json
 import os
 import asyncio
 import re
+import csv
 from discord.ext import commands
 from datetime import date
 from numpy import random
@@ -53,7 +54,11 @@ class MyClient(discord.Client):
     anime_data = json.load(
         open(f'{workingD}/anime_database.json', encoding='utf8'))
 
-    themes_data = json.load(open(f'{workingD}/themes.json', encoding='utf8'))
+    themes_data = json.load(open(f'{workingD}/themes1.json', encoding='utf8'))
+
+    with open(f'{workingD}/registered_ids.csv', 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        registered_ids = [int(row[0]) for row in list(reader)[1:]]
 
     categories = ['waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo', 'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile',
      'wave', 'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kill', 'kick', 'happy', 'wink', 'poke','dance', 'cringe']
