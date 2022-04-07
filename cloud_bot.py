@@ -133,6 +133,36 @@ class MyClient(discord.Client):
 
         return '\n'.join(output)
 
+    def getAnime(self, search):
+        base_url = 'https://api.jikan.moe/v4/anime'
+        names = []
+        anime_ids = []
+        request = requests.get(base_url, params={'q': search}, verify=False)
+        count = 1
+        if request.status_code == 200:
+            data = json.loads(request.text)
+            for result in data['data']:
+                if result['mal_id'] in self.registered_ids:
+                    names.append(f"{count}) {result['title']}")
+                    anime_ids.append(result['mal_id'])
+            return list(zip(names, anime_ids))
+        else:
+            return [], []
+
+    async def on_ready(self):
+        print('Logged in as')
+        print(self.user.name)
+        print(self.user.id)
+        print('------')
+
+    async def on_member_join(self, member):
+        guild = member.guild
+        if guild.system_channel is not None:
+            role = discord.utils.get(member.guild.roles, name="Normies")
+            member.add_role(role)
+            to_send = f'Welcome {member.mention} to {guild.name}'
+            await guild.system_channel.send(to_send)
+
     async def on_message(self, message):
         if message.author == client.user:
             return
@@ -559,7 +589,7 @@ class MyClient(discord.Client):
 
             if title.content:
                 self.missing_list[title.content] = True
-                json.dump(self.missing_list, open('missing_list.json', 'w'))
+                json.dump(self.missing_list, open('db/missing_list.json', 'w'))
                 await message.channel.send('Added to the list')
             else:
                 await message.channel.send('Write the full title of the anime pls')
@@ -570,18 +600,13 @@ class MyClient(discord.Client):
             if len(search) < 4:
                 return await message.channel.send('Sorry, you need to specify at least 4 characters')
 
-            display = []
-            matches = []
-            count = 1
+            results = self.getAnime(search)
+            if not results:
+                return await message.channel.send('Sorry, that search did not return any results')
 
-            for i, item in enumerate(self.anime_data):
-                titles = item['title'].split('|')
-                for title in titles:
-                    if search in title.lower():
-                        display.append(f'{count}) {titles[0]}')
-                        count += 1
-                        matches.append(item['anime_id'])
-                        break
+            # await message.channel.send(results)
+            display = [item[0] for item in results]
+            matches = [item[1] for item in results]
 
             if not matches:
                 return await message.channel.send('Sorry, that search did not return any results')
